@@ -1,0 +1,12 @@
+entrypoint = "server.js"
+
+[env]
+PORT = "3000"
+JWT_SECRET = "5952577b9b95362f933cc5da25e714d66afa9e303195e7d0cc369e8acaf87e"
+ENCRYPTION_KEY = "41a2b1ff16952cc8c5e097d12ac9a16016b1d819342338d9a3e9533856708680"
+
+[interpreter]
+command = ["node"]
+
+[run]
+command = "node server.js"
