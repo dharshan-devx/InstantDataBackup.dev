@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="/css/style.css"> <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> </head>
+<body>
+    <header>
+        <h1>User Profile Management</h1>
+        <nav class="user-nav">
+            <a href="dashboard.html" class="btn btn-outline profile-button">Dashboard</a>
+        </nav>
+    </header>
+
+    <main>
+        <section id="profile-details">
+            <h2>Personal Information</h2>
+            <form id="profile-form">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" value="John Doe" disabled>
+                    <button type="button" id="edit-name-btn">Edit</button>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" value="john.doe@example.com" disabled>
+                    <button type="button" id="edit-email-btn">Edit</button>
+                </div>
+                <div class="form-group">
+                    <label for="current-password">Current Password:</label>
+                    <input type="password" id="current-password" name="current-password">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password:</label>
+                    <input type="password" id="new-password" name="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password:</label>
+                    <input type="password" id="confirm-password" name="confirm-password">
+                </div>
+                <button type="submit">Save Changes</button>
+            </form>
+        </section>
+
+        <section id="usage-stats">
+            <h2>Usage Statistics</h2>
+
+            <div class="analytics-section">
+                <h3>Storage Usage Analytics</h3>
+                <div class="chart-container">
+                    <canvas id="storageChart"></canvas>
+                </div>
+            </div>
+
+            <div class="activity-log-section">
+                <h3>Activity Log</h3>
+                <ul id="activity-list">
+                    <li>[2025-06-03 10:00 AM] Uploaded: document.pdf</li>
+                    <li>[2025-06-03 09:30 AM] Downloaded: image.jpg</li>
+                    <li>[2025-06-02 05:00 PM] Deleted: old_report.docx</li>
+                </ul>
+            </div>
+        </section>
+        <section id="feedback-report">
+            <h2>Feedback & Bug Report</h2>
+            <form id="report-issue-form">
+                <p>Have feedback or encountered a bug? Let us know!</p>
+                <div class="form-group">
+                    <label for="issue-subject">Subject:</label>
+                    <input type="text" id="issue-subject" name="subject" required>
+                </div>
+                <div class="form-group">
+                    <label for="issue-description">Description:</label>
+                    <textarea id="issue-description" name="description" rows="5" required></textarea>
+                </div>
+                <p id="issue-report-message" class="message-area"></p>
+                <button type="submit">Submit Report</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Your App</p>
+    </footer>
+
+    <script>
+        const reportIssueForm = document.getElementById('report-issue-form');
+            const issueReportMessage = document.getElementById('issue-report-message');
+
+            if (reportIssueForm) {
+                reportIssueForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    issueReportMessage.textContent = ''; // Clear previous messages
+                    issueReportMessage.classList.remove('error', 'success');
+
+                    const subject = document.getElementById('issue-subject').value;
+                    const description = document.getElementById('issue-description').value;
+
+                    // Assuming you have a JWT token stored (e.g., in localStorage) from user login
+                    const userToken = localStorage.getItem('token'); // 'token' is the key where your user's JWT is stored
+
+                    if (!userToken) {
+                        issueReportMessage.textContent = 'You must be logged in to report an issue.';
+                        issueReportMessage.classList.add('error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/report-issue', { // Endpoint in your main server.js
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${userToken}`
+                            },
+                            body: JSON.stringify({ subject, description }),
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            issueReportMessage.textContent = 'Issue reported successfully!';
+                            issueReportMessage.classList.add('success');
+                            reportIssueForm.reset(); // Clear the form
+                        } else {
+                            issueReportMessage.textContent = data.message || 'Failed to report issue.';
+                            issueReportMessage.classList.add('error');
+                        }
+                    } catch (error) {
+                        console.error('Error reporting issue:', error);
+                        issueReportMessage.textContent = 'An error occurred while reporting the issue.';
+                        issueReportMessage.classList.add('error');
+                    }
+                });
+            }
+        // JavaScript for handling edit/save and fetching data
+        document.addEventListener('DOMContentLoaded', () => {
+            const nameInput = document.getElementById('name');
+            const editNameBtn = document.getElementById('edit-name-btn');
+            const emailInput = document.getElementById('email');
+            const editEmailBtn = document.getElementById('edit-email-btn');
+            const profileForm = document.getElementById('profile-form');
+            const activityList = document.getElementById('activity-list');
+
+            // Toggle editability for Name
+            editNameBtn.addEventListener('click', () => {
+                nameInput.disabled = !nameInput.disabled;
+                editNameBtn.textContent = nameInput.disabled ? 'Edit' : 'Lock';
+            });
+
+            // Toggle editability for Email
+            editEmailBtn.addEventListener('click', () => {
+                emailInput.disabled = !emailInput.disabled;
+                editEmailBtn.textContent = emailInput.disabled ? 'Edit' : 'Lock';
+            });
+
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // In a real application, you'd send this data to your server
+                // using a fetch or XMLHttpRequest call.
+                const name = nameInput.value;
+                const email = emailInput.value;
+                const currentPassword = document.getElementById('current-password').value;
+                const newPassword = document.getElementById('new-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+
+                console.log('Saving profile changes:', { name, email, newPassword });
+
+                // Example: Send data to /api/profile
+                try {
+                    const response = await fetch('/api/profile', {
+                        method: 'POST', // or PUT
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // 'Authorization': 'Bearer YOUR_JWT_TOKEN' // If you have authentication
+                        },
+                        body: JSON.stringify({ name, email, currentPassword, newPassword, confirmPassword })
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        alert('Profile updated successfully!');
+                        // You might want to re-disable fields after successful save
+                        nameInput.disabled = true;
+                        editNameBtn.textContent = 'Edit';
+                        emailInput.disabled = true;
+                        editEmailBtn.textContent = 'Edit';
+                        document.getElementById('current-password').value = '';
+                        document.getElementById('new-password').value = '';
+                        document.getElementById('confirm-password').value = '';
+                    } else {
+                        alert('Error updating profile: ' + (data.message || response.statusText));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while updating profile.');
+                }
+            });
+
+            // --- Chart.js for Storage Usage ---
+            const ctx = document.getElementById('storageChart').getContext('2d');
+            const storageData = {
+                labels: ['Used Space', 'Available Space'],
+                datasets: [{
+                    data: [75, 25], // Example values: 75% used, 25% available
+                    backgroundColor: ['#FF6384', '#36A2EB'],
+                    hoverOffset: 4
+                }]
+            };
+
+            const storageChart = new Chart(ctx, {
+                type: 'pie',
+                data: storageData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Storage Usage'
+                        }
+                    }
+                }
+            });
+
+            // --- Function to fetch and display activity log (example) ---
+            async function fetchActivityLog() {
+                try {
+                    // In a real app, you'd fetch this from your server
+                    // const response = await fetch('/api/activity-log');
+                    // const activities = await response.json();
+
+                    // Dummy data for now
+                    const activities = [
+                        { timestamp: '2025-06-03 10:00 AM', type: 'Upload', fileName: 'document.pdf' },
+                        { timestamp: '2025-06-03 09:30 AM', type: 'Download', fileName: 'image.jpg' },
+                        { timestamp: '2025-06-02 05:00 PM', type: 'Delete', fileName: 'old_report.docx' },
+                        { timestamp: '2025-06-02 02:15 PM', type: 'Upload', fileName: 'presentation.pptx' },
+                        { timestamp: '2025-06-01 11:45 AM', type: 'Download', fileName: 'spreadsheet.xlsx' }
+                    ];
+
+                    activityList.innerHTML = ''; // Clear existing
+                    activities.forEach(activity => {
+                        const li = document.createElement('li');
+                        li.textContent = `[${activity.timestamp}] ${activity.type}: ${activity.fileName}`;
+                        activityList.appendChild(li);
+                    });
+                } catch (error) {
+                    console.error('Error fetching activity log:', error);
+                    activityList.innerHTML = '<li>Error loading activity log.</li>';
+                }
+            }
+
+            // Call to fetch activity log on page load
+            fetchActivityLog();
+        });
+    </script>
+    <style>
+        /* Basic CSS for profile.html - you should integrate this into your style.css */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 1em 0;
+            text-align: center;
+        }
+        header nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+        header nav ul li {
+            margin: 0 15px;
+        }
+        header nav ul li a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        main {
+            padding: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .form-group label {
+            width: 150px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"] {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .form-group button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        button[type="submit"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+        .analytics-section, .activity-log-section {
+            margin-top: 40px;
+        }
+        .chart-container {
+            width: 70%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        #activity-list {
+            list-style: none;
+            padding: 0;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #activity-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        #activity-list li:last-child {
+            border-bottom: none;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            background-color: #333;
+            color: #fff;
+        }
+    </style>
+</body>
+</html>
